@@ -1,0 +1,2 @@
+seed,alpha,lstm,anticipation,per,episodes,w_pwr,pwr_form,train_s,return_mean,return_std,cvar25,rlf_rate,n_eval,pt_dbm,rb,ho_per_ep,steps,insample_return_mean,insample_return_std,insample_cvar25,insample_rlf_rate,insample_n_eval,insample_pt_dbm,insample_rb,insample_ho_per_ep,insample_steps,gap_return,gap_rlf,lat_mean_ms,lat_p50_ms,lat_p95_ms,lat_p99_ms,lat_max_ms,lat_n
+14,0.25,0,1,1,1500,0.15,quad,659.7,79.6948,4.207,77.7377,0.4,500,29.7311,65.9991,0.298,98.828,77.3636,12.3131,70.4414,0.5,200,29.863,65.9879,0.22,96.53,-2.3312,-0.1,0.521,0.3477,0.8073,0.8785,2.4919,49414
