@@ -43,10 +43,10 @@ the 23 dBm floor.
 - It is **deterministic given the seed and not predictable from any observable available during
   training.**
 
-## Eight pre-registered predictions failed, and all eight are reported as failures
+## Six pre-registered predictions failed, one became unevaluable, and every one is reported
 
-`prereg/` carries all three pre-registrations verbatim, with their original dates, written before
-the runs they govern existed.
+`prereg/` carries all four pre-registrations verbatim, with their original dates, written before
+the runs they govern existed. The complete sixteen-rule record is Table X of the paper.
 
 - **P4** predicted an early-detection AUC ≥ 0.80 from per-episode transmit-power volatility.
   On fresh seeds it reached **0.653** (*p* = 0.347), after an exploratory search of 150
@@ -54,13 +54,19 @@ the runs they govern existed.
 - **W2** predicted the low-basin count would rise monotonically with the reward weight. Observed
   3, 2, 6, 7 — inverted between the two cheapest arms.
 
-- **Q1-Q4** governed the power-penalty form sweep, and all four failed. Q1 predicted the
-  quadratic form would put at least one run inside the interval; it put none, and halved the low
-  basin instead. Q2 predicted the interval would stay empty under the square-root form; one run's
-  mean landed inside — that run is the within-run mixture described above. Q3 held in both arms
-  the pre-registration made eligible, and failed only on an arm its own gate excludes. Q4 bounded
-  the rail locations, and **both new arms breached it by 0.022 dB and 0.126 dB** against a 5.9 dB
-  gap — bounds we set too tightly, not rails that moved.
+- **Q1, Q2 and Q4** governed the power-penalty form sweep. Q1 predicted the quadratic form would
+  put at least one run inside the interval; it put none, and halved the low basin instead. Q2
+  predicted the interval would stay empty under the square-root form; one run's mean landed inside
+  — that run is the within-run mixture described above. Q4 bounded the rail locations, and **both
+  new arms breached it by 0.022 dB and 0.126 dB** against a 5.9 dB gap — bounds we set too tightly,
+  not rails that moved. **Q3 held** in both arms the pre-registration made eligible; it does not
+  apply to the arm its own gate excludes.
+- **A3** governed the actuator sweep and failed on a criterion of our own construction: it required
+  interior reliability to fall between the low- and high-basin rates *of the same arm*, but every
+  committed interior policy under direct addressing is itself labelled low-basin, so the test is
+  circular exactly where it matters. **A4** is the unevaluable one — it held in `inc7` (0.119 dB
+  against a 0.25 dB tolerance) and has no referent in `direct8`, which the manipulation left with no
+  rails to locate. A1 and A2, the decisive and attribution rules, both held.
 
 None of these was quietly dropped. All are in the paper. On Q4 we did not waive our own kill rule
 to keep the result: **both form arms are reported as exploratory rather than confirmatory**, and
@@ -93,6 +99,9 @@ the breach is stated in the manuscript.
 | `runs/pwrform_quad`, `pwrform_sqrt` | 20 runs each, the power-penalty form arms |
 | `runs/pwract_direct8`, `pwract_inc7` | 20 runs each, the actuator arms |
 | `runs/wpwr_adjudication_runs.csv` | all 80 weight-sweep runs in one table |
+| `runs/sixconfig/` | the six-configuration controller sweep — 120 runs, `all_metrics.csv` plus one `_returns.csv` per run. **Not part of the 180**: these runs were produced for the ablation study of [4] and are held with that project; what is here is the summary and the per-episode return series that Sections IV-D and VI-A are computed from |
+| `analysis/sixconfig_export.py` | regenerates `runs/sixconfig/` from the source sweep and refuses to write unless it reproduces the published Table IV, the per-seed basin counts and the chi-square test |
+| `ENVIRONMENT.md` | interpreter and package versions, and every call site at which the run seed enters the pipeline |
 
 Each run directory holds, per seed: `_metrics.csv` (the headline numbers), `_returns.csv`
 (per-episode return and actuator trace) and `_eval.csv` (per-episode held-out results).
@@ -102,6 +111,8 @@ Each run directory holds, per seed: `_metrics.csv` (the headline numbers), `_ret
 ```bash
 python analysis/wpwr_adjudicate.py     # scores every W1-W4 prediction against runs/
 python analysis/basin_early_detect.py --dir runs/basin_v3 --cell "pt_mean:0-300:std"
+python analysis/sixconfig_export.py --src <sweep_r3>   # verifies Table IV, then writes runs/sixconfig
+python analysis/basin_early_detect.py --dir runs/sixconfig --iters 20000   # reproduces Sec. VI-A
 python analysis/make_figures.py
 ```
 
