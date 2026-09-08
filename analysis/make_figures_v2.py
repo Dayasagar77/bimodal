@@ -32,14 +32,37 @@ HIGH, LOW, MIX = '#1668B8', '#C4561A', '#6A3D9A'
 GRID, INK, MUTED = '#D8D8D8', '#1A1A1A', '#5A5A5A'
 THRESH = 27.0
 
+# TYPOGRAPHY — one block for every figure, chosen so the set is internally consistent
+# and reproducible on any machine.
+#
+#   Why STIX and not "Times New Roman": Times is not installed everywhere, so a figure
+#   built on one machine silently fell back to DejaVu Serif while one built on another
+#   embedded TimesNewRomanPSMT. That is exactly what happened to this figure set — five
+#   figures in DejaVu Serif, one in Times. STIX ships with matplotlib, is metrically
+#   compatible with Times, and renders identically everywhere.
+#
+#   mathtext.fontset must be set too. Its default is 'dejavusans', so every $W_{pwr}$,
+#   $\bar{P}_t$ and $\sqrt{u}$ was being typeset in a SANS face inside serif figures.
+#
+#   savefig.bbox is deliberately NOT 'tight': tight expands the page beyond figsize when
+#   axis labels are long, which made fig5 8.18 in and fig6 7.77 in against an IEEE
+#   two-column text width of 7.16 in. The build then scales them down to \linewidth, so
+#   their text rendered ~14% and ~8% smaller than every other figure. Exact figsize plus
+#   constrained_layout keeps the page exactly the width it is designed for.
+COL, TWOCOL = 3.5, 7.16          # IEEE single- and double-column text widths, inches
 plt.rcParams.update({
-    'font.family': 'serif', 'font.serif': ['Times New Roman', 'DejaVu Serif'],
+    'font.family': 'serif', 'font.serif': ['STIXGeneral', 'DejaVu Serif'],
+    'mathtext.fontset': 'stix',
     'font.size': 8, 'axes.labelsize': 8, 'axes.titlesize': 8,
     'xtick.labelsize': 7.5, 'ytick.labelsize': 7.5, 'legend.fontsize': 7.5,
     'axes.linewidth': 0.6, 'xtick.major.width': 0.6, 'ytick.major.width': 0.6,
     'axes.edgecolor': MUTED, 'text.color': INK,
     'axes.labelcolor': INK, 'xtick.color': MUTED, 'ytick.color': MUTED,
-    'savefig.bbox': 'tight', 'savefig.pad_inches': 0.02, 'figure.dpi': 400,
+    'savefig.bbox': None, 'savefig.pad_inches': 0.01, 'figure.dpi': 400,
+    'figure.constrained_layout.use': True,
+    'figure.constrained_layout.h_pad': 0.02, 'figure.constrained_layout.w_pad': 0.02,
+    'pdf.fonttype': 42,           # embed TrueType, not Type3: required by IEEE
+    'ps.fonttype': 42,
 })
 
 D = pd.read_csv(os.path.join(HERE, 'wpwr_adjudication_runs.csv'))
@@ -47,12 +70,14 @@ D['low'] = D.pt < THRESH
 assert len(D) == 80, f'expected the 80-run weight sweep, got {len(D)}'
 
 
-def save(fig, name):
+def save(fig, name, target):
+    w, h = fig.get_size_inches()
+    assert abs(w - target) < 1e-6, f'{name}: width {w:.3f}in, expected {target}in'
+    assert w <= TWOCOL + 1e-6, f'{name}: {w:.3f}in exceeds the IEEE text width {TWOCOL}in'
     for ext in ('pdf', 'png'):
         fig.savefig(os.path.join(OUT, f'{name}.{ext}'))
-    # a second, wider render for the Word build, where the figure spans a 6.5in page
     plt.close(fig)
-    print(f'  wrote {name}.pdf / .png')
+    print(f'  wrote {name}  {w:.2f} x {h:.2f} in')
 
 
 def boot_ci(x, n=20000, seed=0):
@@ -66,7 +91,7 @@ def boot_ci(x, n=20000, seed=0):
 # ============================================================ Fig 1 (two-column)
 fig, (axm, axd) = plt.subplots(
     2, 1, figsize=(7.16, 3.5), sharex=True,
-    gridspec_kw=dict(height_ratios=[2.6, 1.0], hspace=0.12))
+    gridspec_kw=dict(height_ratios=[2.6, 1.0]))
 
 arms = sorted(D.w.unique())
 axm.axvspan(25, 28, color='#F2F2F2', zorder=0)
@@ -126,7 +151,7 @@ axd.annotate('', xy=(gap_lo, axd.get_ylim()[1] * 0.72), xytext=(gap_hi, axd.get_
 axd.text((gap_lo + gap_hi) / 2, axd.get_ylim()[1] * 0.78,
          f'empty interval {gap_hi - gap_lo:.2f} dB\n(0 of 80 runs)',
          ha='center', va='bottom', fontsize=7, color=MUTED, style='italic')
-save(fig, 'fig1_basins_by_weight')
+save(fig, 'fig1_basins_by_weight', TWOCOL)
 
 # ============================================================ Fig 2 (one-column)
 fig, ax = plt.subplots(figsize=(3.5, 2.9))
@@ -157,7 +182,7 @@ for mask, col, x0 in ((D.low, LOW, 23.30), (~D.low, HIGH, 29.60)):
 ax.legend(loc='lower left', frameon=False, handletextpad=0.3, borderpad=0.1, fontsize=6.8)
 ax.text(0.99, 0.98, 'bars: regime mean, 95% bootstrap CI\n(20,000 resamples)',
         transform=ax.transAxes, ha='right', va='top', fontsize=6.2, color=MUTED, style='italic')
-save(fig, 'fig2_rlf_vs_power')
+save(fig, 'fig2_rlf_vs_power', COL)
 print('figures 1-2 done')
 
 
@@ -169,7 +194,7 @@ RB = pd.read_csv(os.path.join(HERE, 'fig4b_runs.csv'))
 assert len(RB) == 120, f'expected the 120 power-objective runs, got {len(RB)}'
 
 fig, (a1, a2) = plt.subplots(1, 2, figsize=(7.16, 2.5),
-                             gridspec_kw=dict(width_ratios=[1.25, 1.0], wspace=0.28))
+                             gridspec_kw=dict(width_ratios=[1.25, 1.0]))
 
 order = [('s1', 'seed 1 · committed low rail', LOW),
          ('s16', 'seed 16 · mean 26.84 dBm', MIX),
@@ -224,7 +249,7 @@ for sp in ('top', 'right'):
     a2.spines[sp].set_visible(False)
 a2.legend(loc='upper left', frameon=False, fontsize=6.2, handletextpad=0.3,
           borderpad=0.1, labelspacing=0.6)
-save(fig, 'fig4_interior_mixture')
+save(fig, 'fig4_interior_mixture', TWOCOL)
 
 # ============================================================ Fig 5 (two-column)
 AC = pd.read_csv(os.path.join(HERE, 'fig5_actuators.csv'))
@@ -266,7 +291,7 @@ axes[2].legend(handles=[Line2D([], [], ls='', marker='*', color='#1B7837', ms=7,
                                label='rail or rail-mixture run')],
                loc='lower left', bbox_to_anchor=(0.0, -1.35), ncol=2, frameon=False,
                fontsize=6.4, handletextpad=0.3)
-save(fig, 'fig5_actuators')
+save(fig, 'fig5_actuators', TWOCOL)
 print('figures 4-5 done')
 
 
@@ -329,5 +354,50 @@ axes[0].set_title('the same reachable power set {23…30} dBm, addressed three w
                   'Arrows show where one action can take the policy from the reset state.',
                   loc='left', pad=6, fontsize=7.2)
 axes[2].set_xlabel('transmit power (dBm).  Shaded band: the 25–28 dBm interval of §IV-C.')
-save(fig, 'fig6_action_representation')
+save(fig, 'fig6_action_representation', TWOCOL)
 print('figure 6 done')
+
+
+# ============================================================ Fig 3 (one-column)
+# Ported into this script from the original make_figures.py so that the whole figure
+# set shares one typography block. Same computation, same layout; only the fonts and
+# the page width change. The original embedded TimesNewRomanPSMT while every other
+# figure fell back to DejaVu Serif — that inconsistency is what this port removes.
+B = pd.read_csv(os.path.join(HERE, 'basin_v2_runs.csv'))
+assert len(B) == 20, f'expected the 20 reported-controller runs, got {len(B)}'
+B['plow'] = B.pt < THRESH
+B['blow'] = B.rb < 40.0
+cells = {(pl, bl): sorted(int(v) for v in B[(B.plow == pl) & (B.blow == bl)].seed)
+         for pl in (True, False) for bl in (True, False)}
+Kp, Kb, N = int(B.plow.sum()), int(B.blow.sum()), len(B)
+
+fig, ax = plt.subplots(figsize=(COL, 2.5))
+ax.set_xlim(0, 2); ax.set_ylim(0, 2); ax.axis('off')
+for (pl, bl), seeds in cells.items():
+    cx, cy = (0.5 if bl else 1.5), (0.5 if pl else 1.5)
+    exp = (Kp if pl else N - Kp) * (Kb if bl else N - Kb) / N
+    ax.add_patch(Rectangle((cx - 0.48, cy - 0.42), 0.96, 0.84,
+                           facecolor='#F6F6F6', edgecolor=GRID, lw=0.6, zorder=0))
+    ax.text(cx, cy + 0.24, str(len(seeds)), ha='center', va='center',
+            fontsize=15, color=(LOW if pl else HIGH))
+    ax.text(cx, cy + 0.02, f'expected {exp:.1f}', ha='center', va='center',
+            fontsize=6.5, color=MUTED, style='italic')
+    lbl = ('seeds ' + '\n'.join(', '.join(str(v) for v in seeds[k:k + 5])
+                                for k in range(0, len(seeds), 5))) if seeds else '--'
+    ax.text(cx, cy - 0.24, lbl, ha='center', va='center', fontsize=6.2,
+            color=MUTED, linespacing=1.5)
+ax.text(0.5, 2.10, 'low bandwidth', ha='center', va='bottom', fontsize=7.5, color=INK)
+ax.text(1.5, 2.10, 'high bandwidth', ha='center', va='bottom', fontsize=7.5, color=INK)
+ax.text(-0.06, 0.5, 'low power', ha='right', va='center', fontsize=7.5, color=LOW, rotation=90)
+ax.text(-0.06, 1.5, 'high power', ha='right', va='center', fontsize=7.5, color=HIGH, rotation=90)
+ax.text(1.0, -0.20, 'observed against expected if the two splits were independent\n'
+        'hypergeometric $P$(overlap $\\geq$ 2) = 0.613',
+        ha='center', va='top', fontsize=6.4, color=MUTED)
+save(fig, 'fig3_two_lotteries', COL)
+
+obs = {k: len(v) for k, v in cells.items()}
+print(f'  fig3 check: observed {obs[(True,True)]}/{obs[(True,False)]}/'
+      f'{obs[(False,True)]}/{obs[(False,False)]} '
+      f'(low-power&low-bw / low-power&high-bw / high-power&low-bw / high-power&high-bw)')
+print(f'  fig3 check: K_power_low={Kp}  K_bw_low={Kb}  N={N}')
+print('figure 3 done')
