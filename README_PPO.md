@@ -7,8 +7,8 @@
                                              is byte-for-byte the one used by every QR-DQN run
     analysis/adjudicate_ppo.py               applies the registered rules; written before any
                                              seed finished
-    analysis/crosscheck_ppo.py               re-derives every PPO number in SIV-J, non-zero on
-                                             a mismatch
+    analysis/crosscheck_ppo.py               re-derives every PPO number in the manuscript
+                                             text, non-zero on a mismatch
     runs/ppo/                                20 seeds: per-episode held-out results, per-run
                                              metrics, training return series
 

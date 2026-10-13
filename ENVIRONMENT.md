@@ -1,6 +1,6 @@
 # Environment and seeding
 
-This file backs the claim in Section V ("Determinism") that a run is a deterministic function of
+This file backs the paper's claim that a run is a deterministic function of
 (seed, configuration). It records the exact interpreter and package versions every run in this
 repository was produced under, and names the call sites at which the run seed enters the pipeline.
 
@@ -70,5 +70,5 @@ The two files the table refers to, as of the runs in this repository:
     md5  bd14f06763852611056505e696ce24f3  paper2_controller.py
     md5  f916da4619fe21db56056d66142bf49f  paper2_env.py
 
-Both are public in the environment/controller repository cited as reference [4]:
+Both are public in the environment and controller repository:
 https://github.com/Dayasagar77/Anticipate
